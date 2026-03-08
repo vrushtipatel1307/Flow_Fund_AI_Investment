@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const pool = require('../config/db');
-const { randomUUID } = require('crypto');
 
 // REGISTER
 exports.register = async (req, res) => {
@@ -21,7 +21,7 @@ exports.register = async (req, res) => {
 
     await pool.query(
       'INSERT INTO user_profiles (user_id, first_name, last_name) VALUES (?, ?, ?)',
-      [userId, first_name || '', last_name || '']
+      [userId, first_name || null, last_name || null]
     );
 
     res.status(201).json({ message: 'User registered successfully', user_id: userId });
@@ -54,14 +54,13 @@ exports.login = async (req, res) => {
       { expiresIn: '2h' }
     );
 
+    const sessionId = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
-
-    //generate session_id (required by your DB schema)
-    const sessionId = randomUUID();
-
+    const expiresAtUTC = expiresAt.toISOString().slice(0, 19).replace('T', ' ');
+    const userAgent = req.headers['user-agent'] || null;
     await pool.query(
-      'INSERT INTO user_sessions (session_id, user_id, jwt_token, ip_address, expires_at) VALUES (?, ?, ?, ?, ?)',
-      [sessionId, user.user_id, token, req.ip, expiresAt]
+      'INSERT INTO user_sessions (session_id, user_id, jwt_token, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [sessionId, user.user_id, token, req.ip || null, userAgent, expiresAtUTC]
     );
 
     res.json({ message: 'Login successful', token, role: user.role_name });
@@ -87,11 +86,12 @@ exports.logout = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT u.user_id, u.email, r.role_name, p.first_name, p.last_name, u.created_at
+      `SELECT u.user_id, u.email, r.role_name, p.first_name, p.last_name, p.phone, p.date_of_birth, u.created_at
        FROM users u
        JOIN roles r ON u.role_id = r.role_id
        LEFT JOIN user_profiles p ON u.user_id = p.user_id
-       WHERE u.user_id = ?`,
+       WHERE u.user_id = ?
+       LIMIT 1`,
       [req.user.user_id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });

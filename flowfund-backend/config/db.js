@@ -1,12 +1,9 @@
 const mysql = require('mysql2/promise');
-require('dotenv').config();
+const { getPoolConfig, connectionUrl } = require('./dbConfig');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-});
-
+const config = getPoolConfig();
+const pool =
+  typeof config === 'string'
+    ? mysql.createPool(config, { timezone: '+00:00' })
+    : mysql.createPool(config);
 module.exports = pool;

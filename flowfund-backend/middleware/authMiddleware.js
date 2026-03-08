@@ -6,14 +6,15 @@ module.exports = async (req, res, next) => {
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   try {
-    // Check if session exists (not logged out)
+    // Verify JWT first (checks signature + expiry)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Check session still exists (not logged out)
     const [sessions] = await pool.query(
-      'SELECT * FROM user_sessions WHERE jwt_token = ? AND expires_at > NOW()',
+      'SELECT 1 FROM user_sessions WHERE jwt_token = ? LIMIT 1',
       [token]
     );
     if (sessions.length === 0) return res.status(401).json({ error: 'Session expired or invalid' });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
