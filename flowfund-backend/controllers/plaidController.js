@@ -1,5 +1,7 @@
 const getPlaidClient = require('../config/plaid');
 const { Products, CountryCode } = require('plaid');
+const { encrypt } = require('../utils/encrypt');
+const pool = require('../config/db');
 
 // POST /api/plaid/create-link-token
 exports.createLinkToken = async (req, res) => {
