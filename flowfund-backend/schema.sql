@@ -92,6 +92,12 @@ CREATE TABLE IF NOT EXISTS investment_scores (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+-- bank_accounts extended for Bank Aggregator API support
+ALTER TABLE bank_accounts
+  ADD COLUMN IF NOT EXISTS plaid_account_id VARCHAR(100) UNIQUE,
+  ADD COLUMN IF NOT EXISTS plaid_item_id    VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS mask             VARCHAR(10);
+
 -- 9. plaid_items (Bank Aggregator API — one item per institution link per user)
 -- Stores the encrypted aggregator access token at the item level.
 -- One item may yield multiple bank_accounts (added in commit 4).
