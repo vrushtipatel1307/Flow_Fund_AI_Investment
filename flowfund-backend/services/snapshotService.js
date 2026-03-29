@@ -255,4 +255,55 @@ async function sumExpenses(user_id, from, to) {
   return parseFloat(rows[0].total) || 0;
 }
 
-module.exports = { buildSnapshot };
+function buildDemoSnapshot() {
+  return {
+    hasData: true,
+    isDemo: true,
+    userProfile: { timeRange: '90d' },
+    accountsSummary: { accountCount: 1, totalCurrentBalance: 1247.82 },
+    spendingSummary: {
+      last30Days: 508.55,
+      last90Days: 1525.65,
+      averageMonthlySpend: 508.55,
+      topCategories: [
+        { category: 'Food & Drink', amount: 57.75 },
+        { category: 'Groceries', amount: 120.50 },
+        { category: 'Shopping', amount: 90.35 },
+        { category: 'Transportation', amount: 76.50 },
+        { category: 'Entertainment', amount: 44.46 },
+      ],
+      topMerchants: [
+        { merchant: 'Walmart', amount: 67.30 },
+        { merchant: 'Instacart', amount: 53.20 },
+        { merchant: 'Amazon', amount: 48.20 },
+        { merchant: 'Shell Gas', amount: 45.00 },
+        { merchant: 'Target', amount: 42.15 },
+      ],
+      recurringCharges: [
+        { merchant: 'Netflix', amount: '15.49', frequency: 'monthly' },
+        { merchant: 'Spotify', amount: '9.99', frequency: 'monthly' },
+        { merchant: 'Hulu', amount: '7.99', frequency: 'monthly' },
+        { merchant: 'Apple Music', amount: '10.99', frequency: 'monthly' },
+        { merchant: 'Gym Membership', amount: '29.99', frequency: 'monthly' },
+      ],
+      spendingSpikes: [{ category: 'Food & Drink', changePct: 28.5 }],
+    },
+    incomeSummary: {
+      estimatedMonthlyIncome: 1200.00,
+      estimatedSavingsRate: 0.58,
+      cashBufferMonths: 2.45,
+    },
+    riskFlags: [
+      'High subscription load — 5 recurring charges ($64.45/month)',
+      'High discretionary food spending — top spend category',
+    ],
+    recommendedFocusAreas: [
+      'Review and reduce recurring subscriptions ($64.45/month)',
+      'Build emergency fund to cover 3 months of expenses',
+      'Reduce takeout and dining frequency',
+      'Look for grocery deals and meal-prep opportunities',
+    ],
+  };
+}
+
+module.exports = { buildSnapshot, buildDemoSnapshot };

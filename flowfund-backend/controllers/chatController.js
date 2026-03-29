@@ -1,5 +1,5 @@
 const getGeminiClient = require('../config/gemini');
-const { buildSnapshot } = require('../services/snapshotService');
+const { buildSnapshot, buildDemoSnapshot } = require('../services/snapshotService');
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
@@ -12,7 +12,6 @@ IMPORTANT RULES:
 - Never promise returns or guarantee outcomes
 - Never execute or suggest executing trades
 - Base ALL statements on the financial data provided — do not invent numbers
-- If no data is available, say so clearly and encourage the user to link a bank account
 - Keep responses concise, educational, and encouraging
 - Suggest 3–5 practical, specific next steps when relevant
 - Use plain language suitable for young adults and college students
@@ -21,16 +20,16 @@ IMPORTANT RULES:
 Your tone should be: clear, supportive, practical, and honest about limitations.
 `.trim();
 
-function buildContextPrompt(snapshot) {
-  if (!snapshot.hasData) {
-    return `The user has not yet linked a bank account. No financial data is available. Let them know they can connect a bank account on their dashboard to get personalized insights.`;
-  }
+function buildContextPrompt(snapshot, isDemo) {
+  const demoNote = isDemo
+    ? `\n\nNOTE: This is DEMO/EXAMPLE data for illustration purposes. Acknowledge briefly that this is sample data, but still give real, useful insights based on these spending patterns.`
+    : '';
 
   const s = snapshot.spendingSummary;
   const inc = snapshot.incomeSummary;
 
   return `
-Here is the user's verified financial data (computed by the FlowFund AI backend — do not invent or modify these numbers):
+Here is the user's financial data (computed by the FlowFund AI backend — do not invent or modify these numbers):
 
 ACCOUNTS: ${snapshot.accountsSummary.accountCount} linked account(s), total balance $${snapshot.accountsSummary.totalCurrentBalance.toFixed(2)}
 
@@ -56,7 +55,7 @@ ${s.spendingSpikes.length > 0
     : '  No significant spikes detected'}
 
 INCOME & SAVINGS:
-- Estimated monthly income: ${inc.estimatedMonthlyIncome > 0 ? `$${inc.estimatedMonthlyIncome.toFixed(2)}` : 'Not enough income transactions detected'}
+- Estimated monthly income: ${inc.estimatedMonthlyIncome > 0 ? `$${inc.estimatedMonthlyIncome.toFixed(2)}` : 'Not detected'}
 - Estimated savings rate: ${inc.estimatedSavingsRate !== null ? `${(inc.estimatedSavingsRate * 100).toFixed(0)}%` : 'N/A'}
 - Cash buffer: ${inc.cashBufferMonths !== null ? `${inc.cashBufferMonths} months` : 'N/A'}
 
@@ -68,7 +67,7 @@ ${snapshot.riskFlags.length > 0
 RECOMMENDED FOCUS AREAS:
 ${snapshot.recommendedFocusAreas.map(a => `  - ${a}`).join('\n')}
 
-Use only this data when answering. Do not add numbers or facts not listed above.
+Use only this data when answering. Do not add numbers or facts not listed above.${demoNote}
 `.trim();
 }
 
@@ -83,14 +82,20 @@ exports.sendMessage = async (req, res) => {
     return res.status(400).json({ error: 'message is required' });
   }
 
-  // ── Snapshot ──────────────────────────────────────────────────────────────
+  // ── Snapshot (fall back to demo if no real data) ──────────────────────────
   let snapshot;
+  let isDemo = false;
   try {
     snapshot = await buildSnapshot(uid);
-    console.log(`[SNAPSHOT_OK] hasData=${snapshot.hasData}`);
+    if (!snapshot.hasData) {
+      snapshot = buildDemoSnapshot();
+      isDemo = true;
+    }
+    console.log(`[SNAPSHOT_OK] hasData=${snapshot.hasData} isDemo=${isDemo}`);
   } catch (err) {
     console.error('[SNAPSHOT_FETCH_FAILED]', err.message);
-    return res.status(500).json({ error: 'Failed to generate response' });
+    snapshot = buildDemoSnapshot();
+    isDemo = true;
   }
 
   // ── Gemini ────────────────────────────────────────────────────────────────
@@ -103,31 +108,24 @@ exports.sendMessage = async (req, res) => {
     return res.status(500).json({ error: 'Failed to generate response' });
   }
 
-  const fullPrompt = `${SYSTEM_INSTRUCTIONS}\n\n${buildContextPrompt(snapshot)}\n\nUser question: ${message.trim()}`;
-  console.log(`[GEMINI_REQUEST_START] model=${GEMINI_MODEL} promptLen=${fullPrompt.length}`);
+  const fullPrompt = `${SYSTEM_INSTRUCTIONS}\n\n${buildContextPrompt(snapshot, isDemo)}\n\nUser question: ${message.trim()}`;
+  console.log(`[GEMINI_REQUEST_START] model=${GEMINI_MODEL} promptLen=${fullPrompt.length} isDemo=${isDemo}`);
 
   let result;
   try {
-    result = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: fullPrompt,
-    });
+    result = await ai.models.generateContent({ model: GEMINI_MODEL, contents: fullPrompt });
     console.log('[GEMINI_RESPONSE_RECEIVED]');
   } catch (err) {
-    console.error('[GEMINI_CALL_FAILED]', {
-      message: err.message,
-      status: err.status,
-      errorDetails: err.errorDetails,
-    });
+    console.error('[GEMINI_CALL_FAILED]', { message: err.message, status: err.status, errorDetails: err.errorDetails });
     return res.status(500).json({ error: 'Failed to generate response' });
   }
 
   const responseText = result.text;
   if (!responseText) {
-    console.error('[GEMINI_RESPONSE_EMPTY] full result:', JSON.stringify(result).slice(0, 500));
+    console.error('[GEMINI_RESPONSE_EMPTY]', JSON.stringify(result).slice(0, 300));
     return res.status(500).json({ error: 'Failed to generate response' });
   }
 
-  console.log(`[CHAT_REPLY_SENT] replyLen=${responseText.length}`);
-  res.json({ reply: responseText, hasFinancialData: snapshot.hasData });
+  console.log(`[CHAT_REPLY_SENT] replyLen=${responseText.length} isDemo=${isDemo}`);
+  res.json({ reply: responseText, hasFinancialData: true, isDemo });
 };
