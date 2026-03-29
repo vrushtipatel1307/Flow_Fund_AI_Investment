@@ -18,8 +18,16 @@ exports.createLinkToken = async (req, res) => {
 
     res.json({ link_token: response.data.link_token });
   } catch (err) {
-    console.error('create-link-token error:', err?.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to create link token' });
+    // Log the full Plaid error so it appears in Railway logs
+    const plaidError = err?.response?.data;
+    console.error('create-link-token error:', JSON.stringify(plaidError || err.message, null, 2));
+
+    // Surface Plaid's error_code and error_message for easier diagnosis
+    const detail = plaidError
+      ? `[${plaidError.error_code}] ${plaidError.error_message}`
+      : err.message;
+
+    res.status(500).json({ error: 'Failed to create link token', detail });
   }
 };
 
