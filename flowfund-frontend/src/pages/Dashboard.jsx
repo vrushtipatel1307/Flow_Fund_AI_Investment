@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getProfile, logout as logoutApi } from '../api/auth';
 import { getAccounts } from '../api/plaid';
 import usePlaidLink from '../hooks/usePlaidLink';
+import ChatPanel from '../components/ChatPanel';
 
 const styles = {
   page: {
@@ -322,6 +323,8 @@ export default function Dashboard() {
               </div>
             </div>
           ))}
+
+        <ChatPanel hasLinkedAccounts={accounts.length > 0} />
       </div>
     </div>
   );
