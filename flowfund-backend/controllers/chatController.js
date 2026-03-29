@@ -1,6 +1,8 @@
 const getGeminiClient = require('../config/gemini');
 const { buildSnapshot } = require('../services/snapshotService');
 
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
 const SYSTEM_INSTRUCTIONS = `
 You are FlowFund AI's financial education assistant. You help users understand their spending patterns and improve their financial health.
 
@@ -72,41 +74,60 @@ Use only this data when answering. Do not add numbers or facts not listed above.
 
 // POST /api/chat/message
 exports.sendMessage = async (req, res) => {
+  const uid = req.user?.user_id;
+  console.log(`[CHAT_ROUTE_RECEIVED] user_id=${uid}`);
+
   const { message } = req.body;
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    console.log('[CHAT_MESSAGE_MISSING]');
     return res.status(400).json({ error: 'message is required' });
   }
 
+  // ── Snapshot ──────────────────────────────────────────────────────────────
+  let snapshot;
   try {
-    const snapshot = await buildSnapshot(req.user.user_id);
-    const contextPrompt = buildContextPrompt(snapshot);
+    snapshot = await buildSnapshot(uid);
+    console.log(`[SNAPSHOT_OK] hasData=${snapshot.hasData}`);
+  } catch (err) {
+    console.error('[SNAPSHOT_FETCH_FAILED]', err.message);
+    return res.status(500).json({ error: 'Failed to generate response' });
+  }
 
-    const ai = getGeminiClient();
+  // ── Gemini ────────────────────────────────────────────────────────────────
+  let ai;
+  try {
+    ai = getGeminiClient();
+    console.log('[GEMINI_CLIENT_OK]');
+  } catch (err) {
+    console.error('[GEMINI_KEY_MISSING]', err.message);
+    return res.status(500).json({ error: 'Failed to generate response' });
+  }
 
-    const fullPrompt = `${SYSTEM_INSTRUCTIONS}\n\n${contextPrompt}\n\nUser question: ${message.trim()}`;
+  const fullPrompt = `${SYSTEM_INSTRUCTIONS}\n\n${buildContextPrompt(snapshot)}\n\nUser question: ${message.trim()}`;
+  console.log(`[GEMINI_REQUEST_START] model=${GEMINI_MODEL} promptLen=${fullPrompt.length}`);
 
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+  let result;
+  try {
+    result = await ai.models.generateContent({
+      model: GEMINI_MODEL,
       contents: fullPrompt,
     });
-
-    const responseText = result.text;
-    if (!responseText) {
-      console.error('chat error: Gemini returned empty response', result);
-      return res.status(500).json({ error: 'Failed to generate response' });
-    }
-
-    res.json({
-      reply: responseText,
-      hasFinancialData: snapshot.hasData,
-    });
+    console.log('[GEMINI_RESPONSE_RECEIVED]');
   } catch (err) {
-    console.error('chat error:', {
+    console.error('[GEMINI_CALL_FAILED]', {
       message: err.message,
       status: err.status,
       errorDetails: err.errorDetails,
-      stack: err.stack,
     });
-    res.status(500).json({ error: 'Failed to generate response' });
+    return res.status(500).json({ error: 'Failed to generate response' });
   }
+
+  const responseText = result.text;
+  if (!responseText) {
+    console.error('[GEMINI_RESPONSE_EMPTY] full result:', JSON.stringify(result).slice(0, 500));
+    return res.status(500).json({ error: 'Failed to generate response' });
+  }
+
+  console.log(`[CHAT_REPLY_SENT] replyLen=${responseText.length}`);
+  res.json({ reply: responseText, hasFinancialData: snapshot.hasData });
 };

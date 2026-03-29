@@ -14,7 +14,11 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/plaid', require('./routes/plaid'));
 app.use('/api/financial', require('./routes/financial'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/debug', require('./routes/debug'));
 
 app.listen(process.env.PORT || 5000, () => {
-  console.log(`Server running on port ${process.env.PORT || 5000}`);
+  console.log(`[STARTUP] Server running on port ${process.env.PORT || 5000}`);
+  console.log(`[STARTUP] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+  console.log(`[STARTUP] GEMINI_API_KEY present: ${!!process.env.GEMINI_API_KEY}`);
+  console.log(`[STARTUP] GEMINI model: gemini-2.5-flash`);
 });
