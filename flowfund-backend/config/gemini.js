@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 
 let _client = null;
 
@@ -9,7 +9,7 @@ function getGeminiClient() {
     throw new Error('Missing required environment variable: GEMINI_API_KEY');
   }
 
-  _client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  _client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   return _client;
 }
 

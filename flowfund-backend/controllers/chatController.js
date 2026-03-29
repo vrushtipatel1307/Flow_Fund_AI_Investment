@@ -81,13 +81,20 @@ exports.sendMessage = async (req, res) => {
     const snapshot = await buildSnapshot(req.user.user_id);
     const contextPrompt = buildContextPrompt(snapshot);
 
-    const gemini = getGeminiClient();
-    const model = gemini.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const ai = getGeminiClient();
 
     const fullPrompt = `${SYSTEM_INSTRUCTIONS}\n\n${contextPrompt}\n\nUser question: ${message.trim()}`;
 
-    const result = await model.generateContent(fullPrompt);
-    const responseText = result.response.text();
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: fullPrompt,
+    });
+
+    const responseText = result.text;
+    if (!responseText) {
+      console.error('chat error: Gemini returned empty response', result);
+      return res.status(500).json({ error: 'Failed to generate response' });
+    }
 
     res.json({
       reply: responseText,
