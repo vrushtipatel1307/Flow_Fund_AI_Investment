@@ -1,140 +1,37 @@
 import { useState, useRef, useEffect } from 'react';
 import { sendMessage } from '../api/chat';
 
-const SUGGESTED_PROMPTS = [
-  'How am I spending my money?',
-  'What should I focus on to save more?',
-  'What recurring charges do I have?',
-  'Where are my biggest expenses?',
-  'How can I improve my financial health?',
-];
-
-const styles = {
-  container: {
-    border: '1px solid #e8ecea',
-    borderRadius: '12px',
-    overflow: 'hidden',
-    background: '#fff',
-    display: 'flex',
-    flexDirection: 'column',
-    height: '480px',
-    marginTop: '24px',
-  },
-  header: {
-    padding: '14px 20px',
-    background: '#1a4d3e',
-    color: '#fff',
-    fontWeight: 700,
-    fontSize: '15px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  badge: {
-    fontSize: '11px',
-    fontWeight: 500,
-    background: 'rgba(255,255,255,0.2)',
-    padding: '2px 8px',
-    borderRadius: '20px',
-  },
-  messages: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  messageUser: {
-    alignSelf: 'flex-end',
-    background: '#1a4d3e',
-    color: '#fff',
-    borderRadius: '12px 12px 2px 12px',
-    padding: '10px 14px',
-    maxWidth: '75%',
-    fontSize: '14px',
-    lineHeight: '1.5',
-  },
-  messageBot: {
-    alignSelf: 'flex-start',
-    background: '#f4f7f5',
-    color: '#0f2d25',
-    borderRadius: '12px 12px 12px 2px',
-    padding: '10px 14px',
-    maxWidth: '85%',
-    fontSize: '14px',
-    lineHeight: '1.6',
-    whiteSpace: 'pre-wrap',
-  },
-  messageLoading: {
-    alignSelf: 'flex-start',
-    background: '#f4f7f5',
-    color: '#888',
-    borderRadius: '12px',
-    padding: '10px 14px',
-    fontSize: '13px',
-    fontStyle: 'italic',
-  },
-  suggestions: {
-    padding: '8px 16px',
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '6px',
-    borderTop: '1px solid #f0f0f0',
-  },
-  suggestionBtn: {
-    fontSize: '12px',
-    padding: '4px 10px',
-    border: '1px solid #c4d8d0',
-    borderRadius: '20px',
-    background: '#fff',
-    color: '#1a4d3e',
-    cursor: 'pointer',
-  },
-  inputRow: {
-    display: 'flex',
-    gap: '8px',
-    padding: '12px 16px',
-    borderTop: '1px solid #e8ecea',
-  },
-  input: {
-    flex: 1,
-    padding: '10px 14px',
-    border: '1px solid #d0dbd7',
-    borderRadius: '8px',
-    fontSize: '14px',
-    outline: 'none',
-  },
-  sendBtn: {
-    padding: '10px 18px',
-    background: '#1a4d3e',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  disclaimer: {
-    fontSize: '11px',
-    color: '#999',
-    padding: '0 16px 8px',
-    textAlign: 'center',
-  },
+const C = {
+  ink:    '#0f2d25',
+  brand:  '#1a4d3e',
+  accent: '#2ecc8a',
+  border: 'rgba(15,45,37,0.09)',
+  muted:  '#6b7c77',
+  faint:  '#9aadaa',
+  danger: '#dc2626',
+  surface:'#fff',
 };
 
-export default function ChatPanel({ hasLinkedAccounts }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'bot',
-      text: hasLinkedAccounts
-        ? "Hi! I'm your FlowFund AI financial assistant. I can see your linked account data. Ask me anything about your spending, savings, or financial habits."
-        : "Hi! I'm your FlowFund AI financial assistant. Connect a bank account first so I can give you personalized insights based on your real spending data.",
-    },
-  ]);
+const PROMPTS = [
+  'How am I spending my money?',
+  'What should I focus on to save?',
+  'Break down my top expenses',
+  'What recurring charges do I have?',
+  'How can I improve my savings rate?',
+];
+
+export default function ChatPanel({ hasLinkedAccounts, isDemo }) {
+  const greeting = isDemo
+    ? "Hi! I'm using demo data to show you example insights. Connect a real bank account for personalized analysis based on your actual spending."
+    : hasLinkedAccounts
+      ? "Hi! I can see your linked account data. Ask me anything about your spending patterns, savings habits, or financial health."
+      : "Hi! I'm your FlowFund AI financial education assistant. Connect a bank account to unlock personalized insights.";
+
+  const [messages, setMessages] = useState([{ role: 'bot', text: greeting }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
+  const inputRef  = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -143,66 +40,207 @@ export default function ChatPanel({ hasLinkedAccounts }) {
   const handleSend = async (text) => {
     const msg = (text || input).trim();
     if (!msg || loading) return;
-
     setInput('');
-    setMessages((prev) => [...prev, { role: 'user', text: msg }]);
+    setMessages(prev => [...prev, { role: 'user', text: msg }]);
     setLoading(true);
-
     try {
       const { data } = await sendMessage(msg);
-      setMessages((prev) => [...prev, { role: 'bot', text: data.reply }]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'bot', text: 'Sorry, I was unable to generate a response. Please try again.' },
-      ]);
+      setMessages(prev => [...prev, { role: 'bot', text: data.reply }]);
+    } catch (_) {
+      setMessages(prev => [...prev, { role: 'bot', text: 'Something went wrong. Please try again.' }]);
     } finally {
       setLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        FlowFund AI Assistant
-        <span style={styles.badge}>Educational only</span>
+    <div style={{
+      background: C.surface,
+      borderRadius: '16px',
+      border: `1px solid ${C.border}`,
+      boxShadow: '0 2px 4px rgba(15,45,37,0.05), 0 8px 24px rgba(15,45,37,0.07)',
+      display: 'flex', flexDirection: 'column',
+      height: 'calc(100vh - 120px)',
+      minHeight: '460px',
+      maxHeight: '680px',
+      overflow: 'hidden',
+    }}>
+
+      {/* Header */}
+      <div style={{
+        padding: '15px 20px',
+        background: `linear-gradient(135deg, ${C.ink} 0%, ${C.brand} 100%)`,
+        display: 'flex', alignItems: 'center', gap: '10px',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: '10px',
+          background: 'rgba(46,204,138,0.18)',
+          border: '1px solid rgba(46,204,138,0.38)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
+        }}>
+          🤖
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
+            FlowFund AI
+          </div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>Educational Assistant</div>
+        </div>
+        {isDemo && (
+          <span style={{
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
+            background: 'rgba(255,200,0,0.18)', border: '1px solid rgba(255,200,0,0.38)',
+            color: '#fde68a', padding: '2px 8px', borderRadius: '20px',
+          }}>
+            DEMO
+          </span>
+        )}
+        <div style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: C.accent,
+          boxShadow: `0 0 0 3px rgba(46,204,138,0.2)`,
+        }} />
       </div>
 
-      <div style={styles.messages}>
+      {/* Messages */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        padding: '16px 14px',
+        display: 'flex', flexDirection: 'column', gap: '10px',
+      }}>
         {messages.map((m, i) => (
-          <div key={i} style={m.role === 'user' ? styles.messageUser : styles.messageBot}>
-            {m.text}
+          <div key={i} style={{
+            display: 'flex',
+            flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+            gap: '8px', alignItems: 'flex-end',
+          }}>
+            {m.role === 'bot' && (
+              <div style={{
+                width: 24, height: 24, borderRadius: '7px', flexShrink: 0,
+                background: 'rgba(26,77,62,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px',
+              }}>
+                🤖
+              </div>
+            )}
+            <div style={{
+              maxWidth: '82%',
+              padding: m.role === 'user' ? '9px 13px' : '10px 14px',
+              borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+              background: m.role === 'user' ? C.brand : '#f3f6f4',
+              color: m.role === 'user' ? '#fff' : C.ink,
+              fontSize: '13px', lineHeight: '1.6',
+              whiteSpace: 'pre-wrap',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+            }}>
+              {m.text}
+            </div>
           </div>
         ))}
-        {loading && <div style={styles.messageLoading}>Thinking...</div>}
+
+        {loading && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <div style={{
+              width: 24, height: 24, borderRadius: '7px',
+              background: 'rgba(26,77,62,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px',
+            }}>
+              🤖
+            </div>
+            <div style={{
+              padding: '11px 16px', borderRadius: '14px 14px 14px 4px',
+              background: '#f3f6f4', display: 'flex', gap: '5px', alignItems: 'center',
+            }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: 6, height: 6, borderRadius: '50%', background: C.muted,
+                  animation: `ff-bounce 1.3s ease-in-out ${i * 0.18}s infinite`,
+                }} />
+              ))}
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
-      {messages.length <= 1 && (
-        <div style={styles.suggestions}>
-          {SUGGESTED_PROMPTS.map((p) => (
-            <button key={p} style={styles.suggestionBtn} onClick={() => handleSend(p)}>
+      {/* Suggested prompts — only on first load */}
+      {messages.length <= 1 && !loading && (
+        <div style={{
+          padding: '8px 12px',
+          borderTop: `1px solid ${C.border}`,
+          display: 'flex', flexWrap: 'wrap', gap: '6px',
+          flexShrink: 0,
+        }}>
+          {PROMPTS.map(p => (
+            <button
+              key={p}
+              onClick={() => handleSend(p)}
+              style={{
+                fontSize: '11px', padding: '5px 10px',
+                border: '1px solid rgba(26,77,62,0.18)',
+                borderRadius: '20px',
+                background: 'rgba(26,77,62,0.04)',
+                color: C.brand, cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(26,77,62,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(26,77,62,0.04)'; }}
+            >
               {p}
             </button>
           ))}
         </div>
       )}
 
-      <p style={styles.disclaimer}>
-        Educational guidance only — not financial advice. FlowFund AI is not a licensed advisor.
-      </p>
+      {/* Disclaimer */}
+      <div style={{
+        padding: '5px 14px', flexShrink: 0,
+        borderTop: `1px solid ${C.border}`,
+        fontSize: '10px', color: C.faint,
+        textAlign: 'center', lineHeight: 1.5,
+      }}>
+        Educational insights only · Not financial advice · Not a licensed advisor
+      </div>
 
-      <div style={styles.inputRow}>
+      {/* Input */}
+      <div style={{
+        padding: '10px 12px', flexShrink: 0,
+        borderTop: `1px solid ${C.border}`,
+        display: 'flex', gap: '8px',
+      }}>
         <input
-          style={styles.input}
-          placeholder="Ask about your spending or savings..."
+          ref={inputRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
           disabled={loading}
+          placeholder="Ask about your spending or savings…"
+          style={{
+            flex: 1, padding: '9px 13px',
+            border: `1.5px solid ${input ? C.brand : C.border}`,
+            borderRadius: '10px',
+            fontSize: '13px', color: C.ink,
+            background: C.surface, outline: 'none',
+          }}
+          onFocus={e => { e.target.style.borderColor = C.brand; }}
+          onBlur={e => { e.target.style.borderColor = input ? C.brand : C.border; }}
         />
-        <button style={styles.sendBtn} onClick={() => handleSend()} disabled={loading}>
-          Send
+        <button
+          onClick={() => handleSend()}
+          disabled={loading || !input.trim()}
+          style={{
+            width: 38, height: 38,
+            background: (loading || !input.trim()) ? '#dde4e1' : C.brand,
+            color: (loading || !input.trim()) ? C.faint : '#fff',
+            border: 'none', borderRadius: '10px',
+            fontSize: '17px', fontWeight: 700,
+            cursor: (loading || !input.trim()) ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          ↑
         </button>
       </div>
     </div>
