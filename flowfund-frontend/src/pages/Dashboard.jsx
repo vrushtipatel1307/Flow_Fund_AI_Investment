@@ -6,29 +6,8 @@ import { getTransactions } from '../api/transactions';
 import usePlaidLink from '../hooks/usePlaidLink';
 import ChatPanel from '../components/ChatPanel';
 import TransactionFeed from '../components/TransactionFeed';
-
-// ─── Design tokens ──────────────────────────────────────────────────────────
-const C = {
-  ink:        '#0f2d25',
-  brand:      '#1a4d3e',
-  brand2:     '#2d6b52',
-  accent:     '#2ecc8a',
-  accentFade: 'rgba(46,204,138,0.1)',
-  bg:         '#f0f3f1',
-  surface:    '#ffffff',
-  border:     'rgba(15,45,37,0.09)',
-  shadow:     '0 2px 4px rgba(15,45,37,0.05), 0 8px 24px rgba(15,45,37,0.07)',
-  shadowSm:   '0 1px 3px rgba(15,45,37,0.06)',
-  muted:      '#6b7c77',
-  faint:      '#9aadaa',
-  danger:     '#dc2626',
-  success:    '#16a34a',
-  income:     '#059669',
-  expense:    '#e11d48',
-  warning:    '#d97706',
-  r:          '16px',
-  rs:         '10px',
-};
+import AppHeader, { LogoMark } from '../components/AppHeader';
+import { C } from '../theme/flowfundTheme';
 
 // ─── Inject keyframe animations ─────────────────────────────────────────────
 function useKeyframes() {
@@ -49,103 +28,6 @@ function useKeyframes() {
     `;
     document.head.appendChild(el);
   }, []);
-}
-
-// ─── Logo mark ───────────────────────────────────────────────────────────────
-function LogoMark() {
-  return (
-    <div style={{
-      width: 34, height: 34, borderRadius: '10px', flexShrink: 0,
-      background: `linear-gradient(135deg, ${C.brand} 0%, ${C.ink} 100%)`,
-      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      padding: '7px 8px 6px', gap: '3px',
-    }}>
-      {[7, 14, 10, 5].map((h, i) => (
-        <div key={i} style={{
-          width: 4, height: h, borderRadius: '2px 2px 1px 1px',
-          background: i === 1 ? C.accent : 'rgba(255,255,255,0.65)',
-        }} />
-      ))}
-    </div>
-  );
-}
-
-// ─── TopHeader ───────────────────────────────────────────────────────────────
-function TopHeader({ profile, onLogout, liveData }) {
-  const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'User';
-  const initials = [profile?.first_name, profile?.last_name]
-    .filter(Boolean).map(n => n[0]?.toUpperCase()).join('') || 'FF';
-
-  return (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 50,
-      height: '64px',
-      background: C.surface,
-      borderBottom: `1px solid ${C.border}`,
-      display: 'flex', alignItems: 'center',
-      padding: '0 40px', gap: '16px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-        <LogoMark />
-        <div>
-          <div style={{
-            fontSize: '15px', fontWeight: 800, color: C.ink,
-            letterSpacing: '-0.02em', lineHeight: 1.1,
-          }}>
-            FLOWFUND<span style={{ color: C.accent, marginLeft: '2px' }}>AI</span>
-          </div>
-          <div style={{ fontSize: '9px', color: C.faint, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-            Financial Platform
-          </div>
-        </div>
-      </div>
-
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '6px',
-        padding: '4px 12px', borderRadius: '20px',
-        background: liveData ? 'rgba(22,163,74,0.08)' : 'rgba(217,119,6,0.08)',
-        border: `1px solid ${liveData ? 'rgba(22,163,74,0.2)' : 'rgba(217,119,6,0.2)'}`,
-        fontSize: '11px', fontWeight: 600,
-        color: liveData ? C.success : C.warning,
-      }}>
-        <div style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: liveData ? C.success : C.warning,
-        }} />
-        {liveData ? 'Live Data' : 'Demo Mode'}
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: C.accentFade,
-          border: `2px solid rgba(26,77,62,0.3)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '12px', fontWeight: 700, color: C.brand,
-        }}>
-          {initials}
-        </div>
-        <span style={{ fontSize: '13px', color: C.ink, fontWeight: 500, whiteSpace: 'nowrap' }}>
-          {name}
-        </span>
-        <button
-          onClick={onLogout}
-          style={{
-            padding: '6px 14px',
-            background: 'transparent',
-            border: `1.5px solid ${C.border}`,
-            borderRadius: '8px',
-            fontSize: '13px', fontWeight: 600,
-            color: C.muted, cursor: 'pointer',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = C.brand; e.currentTarget.style.color = C.brand; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}
-        >
-          Log out
-        </button>
-      </div>
-    </header>
-  );
 }
 
 // ─── StatCard ────────────────────────────────────────────────────────────────
@@ -555,7 +437,7 @@ export default function Dashboard() {
       minHeight: '100vh', background: C.bg,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
-      <TopHeader profile={profile} onLogout={handleLogout} liveData={!isDemo} />
+      <AppHeader profile={profile} onLogout={handleLogout} liveData={!isDemo} />
 
       <div style={{
         maxWidth: '1280px', margin: '0 auto',

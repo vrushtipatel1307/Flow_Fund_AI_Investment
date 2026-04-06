@@ -4,10 +4,10 @@ const ALGORITHM = 'aes-256-gcm';
 const KEY_HEX_LENGTH = 64; // 32 bytes = 64 hex chars
 
 function getKey() {
-  const hex = process.env.PLAID_TOKEN_KEY;
+  const hex = (process.env.PLAID_TOKEN_KEY || process.env.TOKEN_ENCRYPTION_KEY || '').trim();
   if (!hex || hex.length !== KEY_HEX_LENGTH) {
     throw new Error(
-      'PLAID_TOKEN_KEY must be a 64-character hex string (32 bytes). ' +
+      'PLAID_TOKEN_KEY or TOKEN_ENCRYPTION_KEY must be a 64-character hex string (32 bytes). ' +
       "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
     );
   }
