@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import MarketAnalysis from './pages/MarketAnalysis';
 import { scheduleSessionExpiry } from './utils/session';
 
 function ProtectedRoute({ children }) {
@@ -46,6 +47,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/market"
+        element={
+          <ProtectedRoute>
+            <MarketAnalysis />
           </ProtectedRoute>
         }
       />

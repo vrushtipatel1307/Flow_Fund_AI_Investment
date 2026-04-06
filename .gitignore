@@ -1,3 +1,6 @@
+# Accidental npm at repo root (locks live in flowfund-frontend / flowfund-backend)
+/package-lock.json
+
 # Dependencies
 node_modules/
 
